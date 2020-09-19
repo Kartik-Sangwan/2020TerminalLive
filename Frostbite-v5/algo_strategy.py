@@ -103,9 +103,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         if game_state.my_health <= 15:
             game_state.attempt_spawn(SCRAMBLER, [1, 12], num)
             game_state.attempt_spawn(SCRAMBLER, [26, 12], num + 1)
-        if 15 <= game_state.enemy_health <= 20:
+        if 15 <= game_state.enemy_health <= 20 and (self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
             rand_loc = random.choice([[14, 0], [13, 0]])
             game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
+                game_state.get_resource(BITS)))
+        if (self.enemy_health_overtime[-2] - 3 >= self.enemy_health_overtime[-1]):
+            rand_loc = random.choice([[14, 0], [13, 0]])
+            game_state.attempt_spawn(PING, rand_loc, math.ceil(
                 game_state.get_resource(BITS)))
 
         if 15 < game_state.enemy_health:
@@ -172,13 +176,16 @@ class AlgoStrategy(gamelib.AlgoCore):
         teal_destructors_points = [[0, 13], [27, 13], [3, 12], [7, 12], [11, 12], [15, 12], [19, 12], [23, 12], [5, 10],
                                    [9, 10], [13, 10], [17, 10], [21, 10]]
 
-        if 8 < self.detect_unit(game_state, 0, ENCRYPTOR) < 14 and self.destruct is False:
+        if 8 < self.detect_unit(game_state, 0, DESTRUCTOR) < 12 and self.destruct is False:
             self.dest += game_state.attempt_spawn(DESTRUCTOR, teal_destructors_points)
             self.destruct = True
-            game_state.attempt_upgrade(teal_destructors_points)
+
+        if self.detect_unit(game_state, 0, DESTRUCTOR) == len(teal_destructors_points):
+            self.destruct = False
 
         blue_encryptors_points.reverse()
         game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points[:15])
+        game_state.attempt_upgrade(teal_destructors_points)
         game_state.attempt_upgrade(blue_encryptors_points)
         if self.dest >= len(teal_destructors_points):
             game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points)
