@@ -45,6 +45,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # This is a good place to do initial setup
         self.scored_on_locations = []
         self.enemy_health_overtime = [40]
+        self.dest = 0
 
     def on_turn(self, turn_state):
         """
@@ -83,10 +84,14 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         self.attack(game_state)
 
+        upgraded = self.upgrade(game_state)
         self.enemy_health_overtime.append(game_state.enemy_health)
 
         gamelib.debug_write('enemy health last time was {}'.format(
             self.enemy_health_overtime))
+
+        gamelib.debug_write('number of units upgraded {}'.format(
+            upgraded))
 
     def attack(self, game_state):
         if game_state.turn_number == 1:
@@ -94,28 +99,32 @@ class AlgoStrategy(gamelib.AlgoCore):
                 EMP, [14, 0], math.floor(game_state.get_resource(BITS)))
 
         #  get attacked locations
-        can_spawn = [[0, 13], [27, 13], [1, 12], [26, 12], [2, 11], [25, 11], [3, 10], [24, 10], [4, 9], [23, 9], [5, 8], [22, 8], [6, 7], [
-            21, 7], [7, 6], [20, 6], [8, 5], [19, 5], [9, 4], [18, 4], [10, 3], [17, 3], [11, 2], [16, 2], [12, 1], [15, 1], [13, 0], [14, 0]]
-        best_loc = self.least_damage_spawn_location(game_state, can_spawn)
-
-        if game_state.turn_number > 5 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]:
-            game_state.attempt_spawn(
-                PING, [14, 0], math.floor(game_state.get_resource(BITS)))
 
         if game_state.enemy_health <= 10:
 
-            gamelib.debug_write(
-                "THE BEST LOCATION TO SPAWN IS {}".format(best_loc))
             game_state.attempt_spawn(
-                PING, [14, 0], math.floor(math.floor(game_state.get_resource(BITS))))
+                PING, [7, 6], math.floor(math.floor(game_state.get_resource(BITS))))
         else:
+            # friendly_edges = game_state.game_map.get_edge_locations(
+            #     game_state.game_map.BOTTOM_LEFT) + game_state.game_map.get_edge_locations(game_state.game_map.BOTTOM_RIGHT)
+            # n = len(friendly_edges)
+            # loc_attack = friendly_edges[random.randint(0, n-1)]
             if self.scored_on_locations != []:
-                loc = self.scored_on_locations[0]
-                game_state.attempt_spawn(
-                    SCRAMBLER, loc, math.floor(game_state.get_resource(BITS)))
+                scored_on = self.scored_on_locations[-1]
+                game_state.attempt_spawn(SCRAMBLER, scored_on, math.ceil(
+                    game_state.get_resource(BITS)))
             else:
-                game_state.attempt_spawn(
-                    SCRAMBLER, [14, 0], math.floor(game_state.get_resource(BITS)))
+                game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
+                    game_state.get_resource(BITS)))
+
+    def upgrade(self, game_state):
+        num_upgraded = 0
+        for i in range(1, 28):
+            for j in range(1, 28):
+                if game_state.contains_stationary_unit([i, j]):
+                    if game_state.attempt_upgrade([i, j]):
+                        num_upgraded += 1
+        return num_upgraded
 
     def build_defences(self, game_state):
         """
@@ -127,26 +136,18 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Place destructors that attack enemy units
         # destructor_locations = [[0, 13], [27, 13], [8, 11], [19, 11], [13, 11], [14, 11]]
-        first_encryptor_locations = [[13, 5], [15, 5], [13, 4], [
-            15, 4], [13, 3], [15, 3], [13, 2], [15, 2], [13, 1], [15, 1]]
+        blue_encryptors_points = [[9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6], [18, 6], [10, 5], [11, 5], [12, 5], [13, 5], [
+            14, 5], [15, 5], [16, 5], [17, 5], [11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [16, 4], [12, 3], [13, 3], [14, 3], [15, 3], [13, 2], [14, 2]]
+        teal_destructors_points = [[0, 13], [27, 13], [3, 12], [7, 12], [11, 12], [
+            15, 12], [19, 12], [23, 12], [5, 10], [9, 10], [13, 10], [17, 10], [21, 10]]
 
-        second_encryptor_locations = [[13, 10], [15, 10], [13, 9], [
-            15, 9], [13, 8], [15, 8], [13, 7], [15, 7], [13, 6], [15, 6]]
+        blue_encryptors_points.reverse()
+        game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points[:15])
 
-        first_destructors = [[3, 12], [7, 12], [
-            11, 12], [15, 12], [19, 12], [23, 12]]
-        second_destructors = [[1, 13], [26, 13], [5, 10],
-                              [9, 10], [13, 10], [17, 10], [21, 10]]
-
-        # attempt_spawn will try to spawn units if we have resources, and will check if a blocking unit is already there
-        game_state.attempt_spawn(ENCRYPTOR, second_encryptor_locations)
-        game_state.attempt_spawn(
-            ENCRYPTOR, first_encryptor_locations)
-
-        # create the defenses
-        game_state.attempt_spawn(DESTRUCTOR, first_destructors)
-
-        game_state.attempt_spawn(DESTRUCTOR, second_destructors)
+        self.dest += game_state.attempt_spawn(DESTRUCTOR,
+                                              teal_destructors_points)
+        if self.dest >= len(teal_destructors_points):
+            game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points)
 
     def build_reactive_defense(self, game_state):
         """

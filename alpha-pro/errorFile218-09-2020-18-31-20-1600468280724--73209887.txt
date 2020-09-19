@@ -1,0 +1,10 @@
+Random seed: 3851426406302459179
+---------------- Starting Your Algo --------------------
+Traceback (most recent call last):
+  File "/Users/kartiksangwan/Desktop/2020/alpha-pro/algo_strategy.py", line 267, in <module>
+    algo.start()
+  File "/Users/kartiksangwan/Desktop/2020/alpha-pro/gamelib/algocore.py", line 59, in start
+    game_state_string = get_command()
+  File "/Users/kartiksangwan/Desktop/2020/alpha-pro/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt

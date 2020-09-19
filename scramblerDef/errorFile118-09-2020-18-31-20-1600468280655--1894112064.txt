@@ -1,0 +1,10 @@
+Random seed: 3569819940850464072
+---------------- Starting Your Algo --------------------
+Traceback (most recent call last):
+  File "/Users/kartiksangwan/Desktop/2020/scramblerDef/algo_strategy.py", line 278, in <module>
+    algo.start()
+  File "/Users/kartiksangwan/Desktop/2020/scramblerDef/gamelib/algocore.py", line 59, in start
+    game_state_string = get_command()
+  File "/Users/kartiksangwan/Desktop/2020/scramblerDef/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt
