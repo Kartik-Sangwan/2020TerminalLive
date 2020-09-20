@@ -80,6 +80,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         If there are no stationary units to attack in the front, we will send Pings to try and score quickly.
         """
         # First, place basic defenses
+        self.enemy_health_overtime.append(game_state.enemy_health)
         self.build_defences(game_state)
         # Now build reactive defenses based on where the enemy scored
         # self.build_reactive_defense(game_state)
@@ -87,7 +88,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.attack(game_state)
 
         upgraded = self.upgrade(game_state)
-        self.enemy_health_overtime.append(game_state.enemy_health)
+
 
         gamelib.debug_write('enemy health last time was {}'.format(
             self.enemy_health_overtime))
@@ -97,23 +98,26 @@ class AlgoStrategy(gamelib.AlgoCore):
 
     def attack(self, game_state):
         num = math.floor(game_state.get_resource(BITS) / 2)
+
         if game_state.turn_number < 4 and game_state.my_health >= 15:
             game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
                 game_state.get_resource(BITS)))
 
-        if game_state.my_health <= 15:
-            game_state.attempt_spawn(SCRAMBLER, [1, 12], num)
-            game_state.attempt_spawn(SCRAMBLER, [26, 12], num + 1)
-        if 15 <= game_state.enemy_health <= 20 and len(self.enemy_health_overtime) > 0:
+        if game_state.my_health <= 15 and len(self.enemy_health_overtime) > 2:
             if self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]:
+                game_state.attempt_spawn(SCRAMBLER, [4, 9], num)
+                game_state.attempt_spawn(SCRAMBLER, [23, 9], num + 1)
+
+        if len(self.enemy_health_overtime) > 2:
+            if self.enemy_health_overtime[-2] <= self.enemy_health_overtime[-1]:
                 rand_loc = random.choice([[14, 0], [13, 0]])
-                game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
-                    game_state.get_resource(BITS)))
-        if len(self.enemy_health_overtime) > 0:
-            if self.enemy_health_overtime[-2] - 3 >= self.enemy_health_overtime[-1]:
-                rand_loc = random.choice([[14, 0], [13, 0]])
-                game_state.attempt_spawn(PING, rand_loc, math.ceil(
-                    game_state.get_resource(BITS)))
+                game_state.attempt_spawn(EMP, rand_loc, num + 1)
+                game_state.attempt_spawn(PING, rand_loc, num)
+
+        if 15 <= game_state.enemy_health <= 20:
+            rand_loc = random.choice([[14, 0], [13, 0]])
+            game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
+                game_state.get_resource(BITS)))
 
         if 15 > game_state.enemy_health:
             rand_loc = random.choice([[14, 0], [13, 0]])
