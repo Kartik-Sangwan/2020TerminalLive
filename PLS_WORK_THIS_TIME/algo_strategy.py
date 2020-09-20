@@ -48,6 +48,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.dest = 0
         self.sendSCRAMBLER = False
         self.destruct = False
+
     def on_turn(self, turn_state):
         """
         This function is called every turn with the game state wrapper as
@@ -88,7 +89,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         upgraded = self.upgrade(game_state)
 
-
         gamelib.debug_write('enemy health last time was {}'.format(
             self.enemy_health_overtime))
 
@@ -98,23 +98,51 @@ class AlgoStrategy(gamelib.AlgoCore):
     def attack(self, game_state):
         num = math.floor(game_state.get_resource(BITS) / 2)
         if game_state.turn_number < 3 and game_state.my_health >= 15:
-            game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
-                game_state.get_resource(BITS)))
+            game_state.attempt_spawn(SCRAMBLER, [13, 0], num)
+            game_state.attempt_spawn(SCRAMBLER, [14, 0], num + 1)
 
         if game_state.my_health <= 15:
-            if game_state.turn_number % 2 == 0:
+            if len(self.enemy_health_overtime) >= 2:
+                if self.enemy_health_overtime[-2] > self.enemy_health_overtime[-1]:
+                    game_state.attempt_spawn(SCRAMBLER, [4, 9], num)
+                    game_state.attempt_spawn(SCRAMBLER, [23, 9], num + 1)
+                else:
+                    rand_loc = random.choice([[14, 0], [13, 0]])
+                    game_state.attempt_spawn(EMP, rand_loc, num)
+                    game_state.attempt_spawn(SCRAMBLER, rand_loc, num)
+            else:
                 game_state.attempt_spawn(SCRAMBLER, [4, 9], num)
                 game_state.attempt_spawn(SCRAMBLER, [23, 9], num + 1)
 
         if 15 <= game_state.enemy_health <= 20:
-            rand_loc = random.choice([[14, 0], [13, 0]])
-            game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
-                game_state.get_resource(BITS)))
+            if len(self.enemy_health_overtime) >= 2:
+                if self.enemy_health_overtime[-2] > self.enemy_health_overtime[-1]:
+                    rand_loc = random.choice([[14, 0], [13, 0]])
+                    game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
+                        game_state.get_resource(BITS)))
+                else:
+                    rand_loc = random.choice([[14, 0], [13, 0]])
+                    game_state.attempt_spawn(EMP, rand_loc, num)
+                    game_state.attempt_spawn(SCRAMBLER, rand_loc, num + 1)
+            else:
+                rand_loc = random.choice([[14, 0], [13, 0]])
+                game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
+                    game_state.get_resource(BITS)))
 
         if 15 < game_state.enemy_health:
-            rand_loc = random.choice([[14, 0], [13, 0]])
-            game_state.attempt_spawn(PING, rand_loc, math.ceil(
-                game_state.get_resource(BITS)))
+            if len(self.enemy_health_overtime) >= 2:
+                if self.enemy_health_overtime[-2] > self.enemy_health_overtime[-1]:
+                    rand_loc = random.choice([[14, 0], [13, 0]])
+                    game_state.attempt_spawn(PING, rand_loc, math.ceil(
+                        game_state.get_resource(BITS)))
+                else:
+                    rand_loc = random.choice([[14, 0], [13, 0]])
+                    game_state.attempt_spawn(EMP, rand_loc, num)
+                    game_state.attempt_spawn(PING, rand_loc, num + 1)
+            else:
+                rand_loc = random.choice([[14, 0], [13, 0]])
+                game_state.attempt_spawn(PING, rand_loc, math.ceil(
+                    game_state.get_resource(BITS)))
 
         if self.sendSCRAMBLER or \
                 (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):

@@ -107,7 +107,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                     game_state.get_resource(BITS)))
 
         if game_state.my_health <= 15:
-            if len(self.enemy_health_overtime) > 2:
+            if len(self.enemy_health_overtime) >= 2:
                 if self.enemy_health_overtime[-2] <= self.enemy_health_overtime[-1]:
                     game_state.attempt_spawn(SCRAMBLER, [4, 9], num)
                     game_state.attempt_spawn(SCRAMBLER, [23, 9], num + 1)
