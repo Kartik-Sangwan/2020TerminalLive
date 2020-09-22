@@ -98,25 +98,13 @@ class AlgoStrategy(gamelib.AlgoCore):
 
     def attack(self, game_state):
         num = math.floor(game_state.get_resource(BITS) / 2)
-        if game_state.turn_number < 4 and game_state.my_health > 15:
-            if game_state.turn_number % 2 == 0:
-                game_state.attempt_spawn(SCRAMBLER, [13, 0], math.ceil(
-                    game_state.get_resource(BITS)))
-            else:
-                game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
-                    game_state.get_resource(BITS)))
+        if game_state.turn_number < 3 and game_state.my_health >= 15:
+            game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
+                game_state.get_resource(BITS)))
 
         if game_state.my_health <= 15:
-            if len(self.enemy_health_overtime) >= 2:
-                if self.enemy_health_overtime[-2] <= self.enemy_health_overtime[-1]:
-                    game_state.attempt_spawn(SCRAMBLER, [4, 9], num)
-                    game_state.attempt_spawn(SCRAMBLER, [23, 9], num + 1)
-                else:
-                    game_state.attempt_spawn(SCRAMBLER, [13, 0], num)
-                    game_state.attempt_spawn(SCRAMBLER, [14, 0], num + 1)
-            else:
-                game_state.attempt_spawn(SCRAMBLER, [4, 9], num)
-                game_state.attempt_spawn(SCRAMBLER, [23, 9], num + 1)
+            game_state.attempt_spawn(PING, [4, 9], num)
+            game_state.attempt_spawn(PING, [23, 9], num + 1)
 
         if 15 <= game_state.enemy_health <= 20:
             rand_loc = random.choice([[14, 0], [13, 0]])
@@ -128,8 +116,47 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state.attempt_spawn(PING, rand_loc, math.ceil(
                 game_state.get_resource(BITS)))
 
-        game_state.attempt_spawn(SCRAMBLER, [13, 0], num)
-        game_state.attempt_spawn(SCRAMBLER, [14, 0], num + 1)
+        if self.sendSCRAMBLER or \
+                (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
+            # pings not working properly
+            # send scramblers again
+            if self.scored_on_locations == []:
+                game_state.attempt_spawn(SCRAMBLER, [14, 0], 2 * num + 1)
+            else:
+                loc = self.scored_on_locations[-1]
+                game_state.attempt_spawn(SCRAMBLER, loc, 2 * num + 1)
+            self.sendSCRAMBLER = True
+
+        if not self.sendSCRAMBLER:
+            if game_state.turn_number < 3:
+                game_state.attempt_spawn(SCRAMBLER, [13, 0], num)
+                game_state.attempt_spawn(SCRAMBLER, [14, 0], num + 1)
+            else:
+                if game_state.turn_number % 2 == 0:
+                    game_state.attempt_spawn(PING, [13, 0], math.ceil(
+                        game_state.get_resource(BITS)))
+                else:
+                    game_state.attempt_spawn(PING, [14, 0], math.ceil(
+                        game_state.get_resource(BITS)))
+            #  get attacked locations
+
+        else:
+            if self.scored_on_locations != []:
+                scored_on = self.scored_on_locations[-1]
+                game_state.attempt_spawn(SCRAMBLER, scored_on, math.ceil(
+                    game_state.get_resource(BITS)))
+            else:
+                game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
+                    game_state.get_resource(BITS)))
+
+    def upgrade(self, game_state):
+        num_upgraded = 0
+        for i in range(1, 28):
+            for j in range(1, 28):
+                if game_state.contains_stationary_unit([i, j]):
+                    if game_state.attempt_upgrade([i, j]):
+                        num_upgraded += 1
+        return num_upgraded
 
         if self.sendSCRAMBLER or (
                 game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
