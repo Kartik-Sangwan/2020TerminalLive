@@ -47,6 +47,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_health_overtime = [40]
         self.dest = 0
         self.sendSCRAMBLER = False
+        self.destruct = False
 
     def on_turn(self, turn_state):
         """
@@ -79,14 +80,17 @@ class AlgoStrategy(gamelib.AlgoCore):
         If there are no stationary units to attack in the front, we will send Pings to try and score quickly.
         """
         # First, place basic defenses
-        self.build_defences(game_state)
+        self.enemy_health_overtime.append(game_state.enemy_health)
+        # self.build_defences(game_state)
+        self.buildEnc(game_state)
         # Now build reactive defenses based on where the enemy scored
-        # self.build_reactive_defense(game_state)
+        self.build_reactive_defense(game_state)
+
+        self.build_defences(game_state)
 
         self.attack(game_state)
 
         upgraded = self.upgrade(game_state)
-        self.enemy_health_overtime.append(game_state.enemy_health)
 
         gamelib.debug_write('enemy health last time was {}'.format(
             self.enemy_health_overtime))
@@ -94,18 +98,29 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.debug_write('number of units upgraded {}'.format(
             upgraded))
 
+    def buildEnc(self, game_state):
+        blue_encryptors_points = [[9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6], [18, 6], [10, 5], [11, 5], [12, 5], [13, 5], [
+            14, 5], [15, 5], [16, 5], [17, 5],
+            [11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [
+            16, 4], [12, 3], [13, 3], [14, 3],
+            [15, 3], [13, 2]]
+        game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points)
+
     def attack(self, game_state):
+        if game_state.turn_number == 0 or game_state.turn_number == 1:
+            game_state.attempt_spawn(SCRAMBLER, [13, 0], 3)
+            game_state.attempt_spawn(SCRAMBLER, [14, 0], 2)
         num = math.floor(game_state.get_resource(BITS) / 2)
-        if game_state.turn_number < 4:
-            game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
-                game_state.get_resource(BITS)))
-
-        if game_state.enemy_health <= 20:
-            rand_loc = random.choice([[14, 0], [13, 0]])
-            game_state.attempt_spawn(PING, rand_loc, math.ceil(
-                game_state.get_resource(BITS)))
-
-        if self.sendSCRAMBLER or (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
+        if self.scored_on_locations == []:
+            edges = game_state.game_map.get_edge_locations(
+                game_state.game_map.BOTTOM_LEFT) + game_state.game_map.get_edge_locations(game_state.game_map.BOTTOM_RIGHT)
+            loca = self.least_damage_spawn_location(game_state, edges)
+            game_state.attempt_spawn(SCRAMBLER, loca, num*2+1)
+        else:
+            loca = self.scored_on_locations[-1]
+            game_state.attempt_spawn(SCRAMBLER, loca, num*2+1)
+        if self.sendSCRAMBLER or \
+                (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
             # pings not working properly
             # send scramblers again
             if self.scored_on_locations == []:
@@ -156,21 +171,31 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Place destructors that attack enemy units
         # destructor_locations = [[0, 13], [27, 13], [8, 11], [19, 11], [13, 11], [14, 11]]
-        destruct = False
         blue_encryptors_points = [[9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6],
-                                  [18, 6], [10, 5], [11, 5], [12, 5], [13, 5], [14, 5], [15, 5], [16, 5], [17, 5],
-                                  [11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [16, 4], [12, 3], [13, 3], [14, 3],
+                                  [18, 6], [10, 5], [11, 5], [12, 5], [13, 5], [
+                                      14, 5], [15, 5], [16, 5], [17, 5],
+                                  [11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [
+                                      16, 4], [12, 3], [13, 3], [14, 3],
                                   [15, 3], [13, 2]]
         teal_destructors_points = [[0, 13], [27, 13], [3, 12], [7, 12], [11, 12], [15, 12], [19, 12], [23, 12], [5, 10],
                                    [9, 10], [13, 10], [17, 10], [21, 10]]
 
-        if 8 < self.detect_unit(game_state, 0, ENCRYPTOR) < 14 and destruct is False:
-            self.dest += game_state.attempt_spawn(DESTRUCTOR, teal_destructors_points)
-            destruct = True
-            game_state.attempt_upgrade(teal_destructors_points)
+        if 8 < self.detect_unit(game_state, 0, ENCRYPTOR) < 12 and self.destruct is False:
+            self.dest += game_state.attempt_spawn(
+                DESTRUCTOR, teal_destructors_points)
+            self.destruct = True
+
+        if self.detect_unit(game_state, 0, DESTRUCTOR) != len(teal_destructors_points):
+            self.destruct = False
 
         blue_encryptors_points.reverse()
-        game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points[:15])
+        if self.detect_unit(game_state, 0, ENCRYPTOR) <= 12:
+            game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points)
+        else:
+            # game_state.attempt_upgrade(teal_destructors_points)
+            game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points, 1)
+
+        game_state.attempt_upgrade(blue_encryptors_points)
         if self.dest >= len(teal_destructors_points):
             game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points)
 
@@ -190,12 +215,18 @@ class AlgoStrategy(gamelib.AlgoCore):
         We can track where the opponent scored by looking at events in action frames
         as shown in the on_action_frame function
         """
-        if self.scored_on_locations != []:
-            scored = self.scored_on_locations[0]
-            locs = [[scored[0] + 2, scored[1] + 2],
-                    [scored[0] - 2, scored[1] + 2]]
-            game_state.attempt_spawn(DESTRUCTOR, locs[0])
-            game_state.attempt_spawn(DESTRUCTOR, locs[1])
+        if len(self.scored_on_locations) >= 1:
+            loc = self.scored_on_locations[-1]
+            for i in range(2, 7):
+                for j in range(2, 7):
+                    game_state.attempt_spawn(
+                        DESTRUCTOR, [loc[0] + i, loc[1] + j])
+                    game_state.attempt_spawn(
+                        DESTRUCTOR, [loc[0] - i, loc[1] - j])
+                    game_state.attempt_spawn(
+                        DESTRUCTOR, [loc[0] + i, loc[1] - j])
+                    game_state.attempt_spawn(
+                        DESTRUCTOR, [loc[0] - i, loc[1] + j])
 
     def stall_with_scramblers(self, game_state):
         """
@@ -233,7 +264,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         for unit in stationary_units:
             unit_class = gamelib.GameUnit(unit, game_state.config)
             if unit_class.cost[game_state.BITS] < gamelib.GameUnit(cheapest_unit, game_state.config).cost[
-                game_state.BITS]:
+                    game_state.BITS]:
                 cheapest_unit = unit
 
         # Now let's build out a line of stationary units. This will prevent our EMPs from running into the enemy base.
@@ -260,8 +291,8 @@ class AlgoStrategy(gamelib.AlgoCore):
                 for path_location in path:
                     # Get number of enemy destructors that can attack the final location and multiply by destructor damage
                     damage += len(game_state.get_attackers(path_location, 0)) * \
-                              gamelib.GameUnit(
-                                  DESTRUCTOR, game_state.config).damage_i
+                        gamelib.GameUnit(
+                        DESTRUCTOR, game_state.config).damage_i
                 damages.append(damage)
 
         # Now just return the location that takes the least damage

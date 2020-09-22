@@ -5,6 +5,7 @@ import warnings
 from sys import maxsize
 import json
 
+
 """
 Most of the algo code you write will be in this file unless you create new
 modules yourself. Start by modifying the 'on_turn' function.
@@ -25,7 +26,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
-        self.sendSCRAMBLER = False
 
     def on_game_start(self, config):
         """
@@ -44,9 +44,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         CORES = 0
         # This is a good place to do initial setup
         self.scored_on_locations = []
-        self.enemy_health_overtime = [40]
-        self.dest = 0
+        self.send = False
         self.sendSCRAMBLER = False
+        self.enemy_health_overtime = []
 
     def on_turn(self, turn_state):
         """
@@ -79,72 +79,70 @@ class AlgoStrategy(gamelib.AlgoCore):
         If there are no stationary units to attack in the front, we will send Pings to try and score quickly.
         """
         # First, place basic defenses
+        self.enemy_health_overtime.append(game_state.enemy_health)
         self.build_defences(game_state)
         # Now build reactive defenses based on where the enemy scored
         # self.build_reactive_defense(game_state)
 
         self.attack(game_state)
 
-        upgraded = self.upgrade(game_state)
-        self.enemy_health_overtime.append(game_state.enemy_health)
-
-        gamelib.debug_write('enemy health last time was {}'.format(
-            self.enemy_health_overtime))
-
-        gamelib.debug_write('number of units upgraded {}'.format(
-            upgraded))
-
     def attack(self, game_state):
-        num = math.floor(game_state.get_resource(BITS) / 2)
-        if game_state.turn_number < 4:
-            game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
-                game_state.get_resource(BITS)))
+        game_state.attempt_spawn(SCRAMBLER, [0, 13], 5)
+        game_state.attempt_spawn(EMP, [9, 4], 100)
+        # num = math.floor(game_state.get_resource(BITS) / 2)
+        # if game_state.turn_number < 3 and game_state.my_health >= 15:
+        #     game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
+        #         game_state.get_resource(BITS)))
 
-        if game_state.enemy_health <= 20:
-            rand_loc = random.choice([[14, 0], [13, 0]])
-            game_state.attempt_spawn(PING, rand_loc, math.ceil(
-                game_state.get_resource(BITS)))
+        # if game_state.my_health <= 15:
+        #     loca = self.scored_on_locations[-1]
+        #     game_state.attempt_spawn(SCRAMBLER, loca, 100)
 
-        if self.sendSCRAMBLER or (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
-            # pings not working properly
-            # send scramblers again
-            if self.scored_on_locations == []:
-                game_state.attempt_spawn(SCRAMBLER, [14, 0], 2 * num + 1)
-            else:
-                loc = self.scored_on_locations[-1]
-                game_state.attempt_spawn(SCRAMBLER, loc, 2 * num + 1)
-            self.sendSCRAMBLER = True
+        # if 15 <= game_state.enemy_health <= 20:
+        #     rand_loc = random.choice([[14, 0], [13, 0]])
+        #     game_state.attempt_spawn(SCRAMBLER, rand_loc, math.ceil(
+        #         game_state.get_resource(BITS)))
 
-        if not self.sendSCRAMBLER:
-            if game_state.turn_number < 3:
-                game_state.attempt_spawn(SCRAMBLER, [13, 0], num)
-                game_state.attempt_spawn(SCRAMBLER, [14, 0], num + 1)
-            else:
-                if game_state.turn_number % 2 == 0:
-                    game_state.attempt_spawn(PING, [13, 0], math.ceil(
-                        game_state.get_resource(BITS)))
-                else:
-                    game_state.attempt_spawn(PING, [14, 0], math.ceil(
-                        game_state.get_resource(BITS)))
-            #  get attacked locations
+        # if 15 > game_state.enemy_health:
+        #     edges = friendly_edges = game_state.game_map.get_edge_locations(
+        #         game_state.game_map.BOTTOM_LEFT) + game_state.game_map.get_edge_locations(game_state.game_map.BOTTOM_RIGHT)
 
-        else:
-            if self.scored_on_locations != []:
-                scored_on = self.scored_on_locations[-1]
-                game_state.attempt_spawn(SCRAMBLER, scored_on, math.ceil(
-                    game_state.get_resource(BITS)))
-            else:
-                game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
-                    game_state.get_resource(BITS)))
+        #     locaa = self.least_damage_spawn_location(game_state, edges)
+        #     game_state.attempt_spawn(PING, locaa, math.ceil(
+        #         game_state.get_resource(BITS)))
 
-    def upgrade(self, game_state):
-        num_upgraded = 0
-        for i in range(1, 28):
-            for j in range(1, 28):
-                if game_state.contains_stationary_unit([i, j]):
-                    if game_state.attempt_upgrade([i, j]):
-                        num_upgraded += 1
-        return num_upgraded
+        # if self.sendSCRAMBLER or \
+        #         (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
+        #     # pings not working properly
+        #     # send scramblers again
+        #     if self.scored_on_locations == []:
+        #         game_state.attempt_spawn(SCRAMBLER, [14, 0], 2 * num + 1)
+        #     else:
+        #         loc = self.scored_on_locations[-1]
+        #         game_state.attempt_spawn(SCRAMBLER, loc, 2 * num + 1)
+        #     self.sendSCRAMBLER = True
+
+        # if not self.sendSCRAMBLER:
+        #     if game_state.turn_number < 3:
+        #         game_state.attempt_spawn(SCRAMBLER, [13, 0], num)
+        #         game_state.attempt_spawn(SCRAMBLER, [14, 0], num + 1)
+        #     else:
+        #         if game_state.turn_number % 2 == 0:
+        #             game_state.attempt_spawn(PING, [13, 0], math.ceil(
+        #                 game_state.get_resource(BITS)))
+        #         else:
+        #             game_state.attempt_spawn(PING, [14, 0], math.ceil(
+        #                 game_state.get_resource(BITS)))
+        #  get attacked locations
+
+        # else:
+        #     if self.scored_on_locations != []:
+        #         scored_on = self.scored_on_locations[-1]
+        #         game_state.attempt_spawn(SCRAMBLER, scored_on, math.ceil(
+        #             game_state.get_resource(BITS)))
+        #     else:
+        #         game_state.attempt_spawn(SCRAMBLER, [14, 0], math.ceil(
+        #             game_state.get_resource(BITS)))
 
     def build_defences(self, game_state):
         """
@@ -156,46 +154,30 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Place destructors that attack enemy units
         # destructor_locations = [[0, 13], [27, 13], [8, 11], [19, 11], [13, 11], [14, 11]]
-        destruct = False
-        blue_encryptors_points = [[9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6],
-                                  [18, 6], [10, 5], [11, 5], [12, 5], [13, 5], [14, 5], [15, 5], [16, 5], [17, 5],
-                                  [11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [16, 4], [12, 3], [13, 3], [14, 3],
-                                  [15, 3], [13, 2]]
-        teal_destructors_points = [[0, 13], [27, 13], [3, 12], [7, 12], [11, 12], [15, 12], [19, 12], [23, 12], [5, 10],
-                                   [9, 10], [13, 10], [17, 10], [21, 10]]
+        pink_destructors_points = [[2, 12], [6, 12], [
+            10, 12], [14, 12], [18, 12], [22, 12], [25, 12]]
 
-        if 8 < self.detect_unit(game_state, 0, ENCRYPTOR) < 14 and destruct is False:
-            self.dest += game_state.attempt_spawn(DESTRUCTOR, teal_destructors_points)
-            destruct = True
-            game_state.attempt_upgrade(teal_destructors_points)
+        blue_encryptors_points = [[10, 5], [11, 5], [12, 5], [13, 5], [14, 5], [15, 5], [16, 5], [17, 5], [
+            11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [16, 4], [12, 3], [13, 3], [14, 3], [15, 3], [13, 2], [14, 2]]
+        teal_destructors_points = [
+            [4, 10], [8, 10], [12, 10], [16, 10], [21, 10]]
 
-        blue_encryptors_points.reverse()
-        game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points[:15])
-        if self.dest >= len(teal_destructors_points):
-            game_state.attempt_spawn(ENCRYPTOR, blue_encryptors_points)
-
-    def detect_unit(self, game_state, player_index=1, unit_type=None, valid_x=None, valid_y=None):
-        total_units = 0
-        for location in game_state.game_map:
-            if game_state.contains_stationary_unit(location):
-                for unit in game_state.game_map[location]:
-                    if unit.player_index == player_index and (unit_type is None or unit.unit_type == unit_type) and (
-                            valid_x is None or location[0] in valid_x) and (valid_y is None or location[1] in valid_y):
-                        total_units += 1
-        return total_units
+        game_state.attempt_spawn(DESTRUCTOR, pink_destructors_points)
+        game_state.attempt_spawn(DESTRUCTOR, teal_destructors_points)
+        game_state.attempt_spawn(ENCRYPTOR,  blue_encryptors_points)
+        game_state.attempt_upgrade(
+            teal_destructors_points + pink_destructors_points)
 
     def build_reactive_defense(self, game_state):
         """
         This function builds reactive defenses based on where the enemy scored on us from.
-        We can track where the opponent scored by looking at events in action frames
+        We can track where the opponent scored by looking at events in action frames 
         as shown in the on_action_frame function
         """
-        if self.scored_on_locations != []:
-            scored = self.scored_on_locations[0]
-            locs = [[scored[0] + 2, scored[1] + 2],
-                    [scored[0] - 2, scored[1] + 2]]
-            game_state.attempt_spawn(DESTRUCTOR, locs[0])
-            game_state.attempt_spawn(DESTRUCTOR, locs[1])
+        for location in self.scored_on_locations:
+            # Build destructor one space above so that it doesn't block our own edge spawn locations
+            build_location = [location[0], location[1]+1]
+            game_state.attempt_spawn(DESTRUCTOR, build_location)
 
     def stall_with_scramblers(self, game_state):
         """
@@ -232,8 +214,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         cheapest_unit = FILTER
         for unit in stationary_units:
             unit_class = gamelib.GameUnit(unit, game_state.config)
-            if unit_class.cost[game_state.BITS] < gamelib.GameUnit(cheapest_unit, game_state.config).cost[
-                game_state.BITS]:
+            if unit_class.cost[game_state.BITS] < gamelib.GameUnit(cheapest_unit, game_state.config).cost[game_state.BITS]:
                 cheapest_unit = unit
 
         # Now let's build out a line of stationary units. This will prevent our EMPs from running into the enemy base.
@@ -248,7 +229,7 @@ class AlgoStrategy(gamelib.AlgoCore):
     def least_damage_spawn_location(self, game_state, location_options):
         """
         This function will help us guess which location is the safest to spawn moving units from.
-        It gets the path the unit will take then checks locations on that path to
+        It gets the path the unit will take then checks locations on that path to 
         estimate the path's damage risk.
         """
         damages = []
@@ -256,16 +237,23 @@ class AlgoStrategy(gamelib.AlgoCore):
         for location in location_options:
             path = game_state.find_path_to_edge(location)
             damage = 0
-            if path:
-                for path_location in path:
-                    # Get number of enemy destructors that can attack the final location and multiply by destructor damage
-                    damage += len(game_state.get_attackers(path_location, 0)) * \
-                              gamelib.GameUnit(
-                                  DESTRUCTOR, game_state.config).damage_i
-                damages.append(damage)
+            for path_location in path:
+                # Get number of enemy destructors that can attack the final location and multiply by destructor damage
+                damage += len(game_state.get_attackers(path_location, 0)) * \
+                    gamelib.GameUnit(DESTRUCTOR, game_state.config).damage_i
+            damages.append(damage)
 
         # Now just return the location that takes the least damage
         return location_options[damages.index(min(damages))]
+
+    def detect_enemy_unit(self, game_state, unit_type=None, valid_x=None, valid_y=None):
+        total_units = 0
+        for location in game_state.game_map:
+            if game_state.contains_stationary_unit(location):
+                for unit in game_state.game_map[location]:
+                    if unit.player_index == 1 and (unit_type is None or unit.unit_type == unit_type) and (valid_x is None or location[0] in valid_x) and (valid_y is None or location[1] in valid_y):
+                        total_units += 1
+        return total_units
 
     def filter_blocked_locations(self, locations, game_state):
         filtered = []
@@ -276,7 +264,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
     def on_action_frame(self, turn_string):
         """
-        This is the action frame of the game. This function could be called
+        This is the action frame of the game. This function could be called 
         hundreds of times per turn and could slow the algo down so avoid putting slow code here.
         Processing the action frames is complicated so we only suggest it if you have time and experience.
         Full doc on format of a game frame at: https://docs.c1games.com/json-docs.html

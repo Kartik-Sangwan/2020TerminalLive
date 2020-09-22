@@ -97,7 +97,7 @@ class AlgoStrategy(gamelib.AlgoCore):
     def attack(self, game_state):
         num = math.floor(game_state.get_resource(BITS)/2)
 
-        if self.sendSCRAMBLER or (game_state.turn_number > 2 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
+        if self.sendSCRAMBLER or (game_state.turn_number > 4 and self.enemy_health_overtime[-2] - 3 <= self.enemy_health_overtime[-1]):
             # pings not working properly
             # send scramblers again
             if self.scored_on_locations == []:
