@@ -44,6 +44,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         SP = 0
         # This is a good place to do initial setup
         self.scored_on_locations = []
+        self.enemy = []
+        self.ping = False
 
     def on_turn(self, turn_state):
         """
@@ -76,22 +78,35 @@ class AlgoStrategy(gamelib.AlgoCore):
         If there are no stationary units to attack in the front, we will send Scouts to try and score quickly.
         """
         # First, place basic defenses
+        self.enemy.append(game_state.enemy_health)
         self.build_defences(game_state)
         self.attack(game_state)
 
-    def attack(self, game_state):
-        edges = game_state.game_map.get_edge_locations(
-            game_state.game_map.BOTTOM_LEFT) + game_state.game_map.get_edge_locations(game_state.game_map.BOTTOM_RIGHT)
+    def count_des(self, game_state, x):
+        ans = 0
 
-        deploy_locations = self.filter_blocked_locations(
-            edges, game_state)
-        best = self.least_damage_spawn_location(game_state, deploy_locations)
+        for i in range(x, x + 7):
+            for j in range(14, 20):
+                if game_state.contains_stationary_unit([i, j]) and game_state.contains_stationary_unit([i, j]).unit_type == "DF":
+                    ans += 1
+        gamelib.debug_write(
+            "number of destructors in {} are {}".format(x, ans))
+        return ans
+
+    def attack(self, game_state):
+        if game_state.enemy_health <= 10:
+            game_state.attempt_spawn(INTERCEPTOR, self.least_damage_spawn_location(
+                game_state, [[13, 0], [14, 0]]), 100)
+
+        num = math.ceil(game_state.get_resource(MP)/2)
         if game_state.turn_number >= 10 and game_state.turn_number % 5 == 0:
-            game_state.attempt_spawn(DEMOLISHER, best, 100)
-        if self.scored_on_locations != []:
-            game_state.attempt_spawn(
-                INTERCEPTOR, self.scored_on_locations[-1], 3)
-        game_state.attempt_spawn(SCOUT, best, 1000)
+            game_state.attempt_spawn(DEMOLISHER, [14, 0], 100)
+        if self.scored_on_locations == []:
+            game_state.attempt_spawn(INTERCEPTOR, [13, 0], num)
+            game_state.attempt_spawn(INTERCEPTOR, [14, 0], num + 1)
+        else:
+            loca = self.scored_on_locations[-1]
+            game_state.attempt_spawn(INTERCEPTOR, loca, 100)
 
     def build_defences(self, game_state):
         """
@@ -103,15 +118,19 @@ class AlgoStrategy(gamelib.AlgoCore):
             12, 11], [13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11], [20, 11], [21, 11], [22, 11], [23, 11], [24, 11], [25, 11], [3, 10], [4, 9]]
         teal_encryptors_points = [[7, 10], [8, 10], [9, 10], [10, 10], [11, 10], [12, 10], [13, 10], [14, 10], [15, 10], [16, 10], [17, 10], [18, 10], [19, 10], [20, 10], [21, 10], [22, 10], [23, 10], [24, 10], [7, 9], [8, 9], [9, 9], [10, 9], [11, 9], [12, 9], [13, 9], [14, 9], [15, 9], [16, 9], [17, 9], [18, 9], [19, 9], [20, 9], [21, 9], [22, 9], [23, 9], [7, 8], [8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8], [15, 8], [16, 8], [17, 8], [18, 8], [19, 8], [20, 8], [21, 8], [
             22, 8], [8, 7], [9, 7], [10, 7], [11, 7], [12, 7], [13, 7], [14, 7], [15, 7], [16, 7], [17, 7], [18, 7], [19, 7], [20, 7], [21, 7], [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6], [15, 6], [16, 6], [17, 6], [18, 6], [19, 6], [20, 6], [10, 5], [11, 5], [12, 5], [13, 5], [14, 5], [15, 5], [16, 5], [17, 5], [18, 5], [19, 5], [11, 4], [12, 4], [13, 4], [14, 4], [15, 4], [16, 4], [17, 4], [18, 4], [12, 3], [13, 3], [14, 3], [15, 3], [16, 3], [17, 3], [13, 2], [14, 2], [15, 2], [16, 2]]
-
+        # temp_wall = [[0, 13], [1, 13], [2, 13], [25, 13], [26, 13], [27, 13]]
+        # game_state.attempt_spawn(WALL, temp_wall)
+        # game_state.attempt_upgrade(temp_wall)
         teal_encryptors_points.reverse()
-        for item in blue_destructors_points:
-            game_state.attempt_spawn(TURRET, item)
-            # game_state.attempt_upgrade(item)
-        # game_state.attempt_spawn(WALL, pink_filters_points)
+        game_state.attempt_spawn(TURRET, [[26, 13], [1, 13]])
+        game_state.attempt_upgrade([[26, 13], [1, 13]])
         for item in teal_encryptors_points:
             game_state.attempt_spawn(FACTORY, item)
             game_state.attempt_upgrade(item)
+        # for item in blue_destructors_points:
+        #     game_state.attempt_spawn(TURRET, item)
+            # game_state.attempt_upgrade(item)
+        # game_state.attempt_spawn(WALL, pink_filters_points)
 
     def build_reactive_defense(self, game_state):
         """
